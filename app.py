@@ -94,7 +94,7 @@ with aba2:
             with st.spinner("A IA está lendo e revisando o documento. Isso pode levar alguns segundos..."):
                 try:
                     genai.configure(api_key=chave_api)
-                    modelo = genai.GenerativeModel('gemini-pro')
+                   modelo = genai.GenerativeModel('gemini-2.5-flash')
                     
                     # Usa a função inteligente para extrair o texto
                     texto_completo = "\n".join(extrair_texto(documento_revisao))
