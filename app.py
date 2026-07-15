@@ -89,8 +89,9 @@ with aba2:
             with st.spinner("A IA está lendo e revisando o documento. Isso pode levar alguns segundos..."):
                 try:
                     genai.configure(api_key=chave_api)
-                    # Modelo atualizado e perfeitamente alinhado
-                    modelo = genai.GenerativeModel('gemini-1.5-pro')
+                    
+                    # Usando o modelo universal e mais estável
+                    modelo = genai.GenerativeModel('gemini-pro')
                     
                     texto_completo = "\n".join(extrair_texto(documento_revisao))
                     
