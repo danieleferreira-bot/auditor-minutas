@@ -75,9 +75,9 @@ with aba1:
 # ==========================================
 with aba2:
     st.subheader("Revisor Jurídico Avançado")
-    st.write("Nossa IA fará uma varredura buscando erros de português, concordância de gênero, dados geográficos e pontuação.")
+    st.write("Nossa IA fará uma varredura buscando erros de português, concordância de género, dados geográficos e pontuação.")
     
-    chave_api = st.text_input("Cole sua Chave de API do Google Gemini:", type="password")
+    chave_api = st.text_input("Cole a sua Chave de API do Google Gemini:", type="password")
     documento_revisao = st.file_uploader("Anexe o documento que deseja revisar", type=["docx", "pdf"], key="revisao")
     
     if st.button("Iniciar Revisão Profunda"):
@@ -86,46 +86,40 @@ with aba2:
         elif documento_revisao is None:
             st.warning("⚠️ Por favor, anexe um documento.")
         else:
-            with st.spinner("Conectando aos servidores e revisando o documento..."):
+            with st.spinner("A ligar aos servidores da Google e a rever o documento. Aguarde um pouco..."):
                 try:
-                    genai.configure(api_key=chave_api)
+                    # Limpa espaços invisíveis e configura a API
+                    genai.configure(api_key=chave_api.strip())
                     
-                    # O "Caça-Modelos": Descobre sozinho qual modelo o Google liberou para a sua chave
-                    modelo_escolhido = None
-                    for m in genai.list_models():
-                        if 'generateContent' in m.supported_generation_methods:
-                            modelo_escolhido = m.name
-                            break
+                    # O modelo funcional, rápido e gratuito para 2026
+                    modelo = genai.GenerativeModel('gemini-3.5-flash')
                     
-                    if not modelo_escolhido:
-                        st.error("Sua chave é válida, mas o Google não liberou nenhum modelo de texto para ela ainda.")
-                    else:
-                        modelo = genai.GenerativeModel(modelo_escolhido)
-                        texto_completo = "\n".join(extrair_texto(documento_revisao))
-                        
-                        comando_prompt = f"""
-                        Atue como um revisor de textos e documentos profissionais, jurídicos e contratuais, com foco em precisão gramatical, concordância nominal e lógica.
+                    texto_completo = "\n".join(extrair_texto(documento_revisao))
+                    
+                    comando_prompt = f"""
+                    Atue como um revisor de textos e documentos profissionais, jurídicos e contratuais, com foco em precisão gramatical, concordância nominal e lógica.
 
-                        TAREFA: Analise o documento enviado e identifique erros seguindo estes critérios rigorosos:
-                        1. Dados Gerais: Verifique a coerência de datas, e verifique a coerência entre os estados e municípios informados no documento.
-                        2. Erros de Digitação: Identifique palavras grafadas incorretamente ou letras trocadas.
-                        3. Identificação e Correção de Gênero: Analise o nome próprio do sujeito principal para identificar se é homem ou mulher. Identificado o gênero do nome, aponte e corrija todas as palavras no texto (pronomes, adjetivos, profissões) que estiverem no gênero oposto ou misturadas.
-                        4. Pontuação: Verifique o uso de vírgulas, pontos finais e coerência nos parágrafos.
+                    TAREFA: Analise o documento enviado e identifique erros seguindo estes critérios rigorosos:
+                    1. Dados Gerais: Verifique a coerência de datas, e verifique a coerência entre os estados e municípios informados no documento.
+                    2. Erros de Digitação: Identifique palavras grafadas incorretamente ou letras trocadas.
+                    3. Identificação e Correção de Gênero: Analise o nome próprio do sujeito principal para identificar se é homem ou mulher. Identificado o gênero do nome, aponte e corrija todas as palavras no texto (pronomes, adjetivos, profissões) que estiverem no gênero oposto ou misturadas.
+                    4. Pontuação: Verifique o uso de vírgulas, pontos finais e coerência nos parágrafos.
 
-                        FORMATO FINAL:
-                        Apresente os erros encontrados em uma lista contendo: "Trecho Original" | "Sugestão de Correção". 
-                        Ao final, forneça o texto completo e revisado.
+                    FORMATO FINAL:
+                    Apresente os erros encontrados em uma lista contendo: "Trecho Original" | "Sugestão de Correção". 
+                    Ao final, forneça o texto completo e revisado.
 
-                        DOCUMENTO A SER REVISADO:
-                        {texto_completo}
-                        """
-                        
-                        resposta_ia = modelo.generate_content(comando_prompt)
-                        st.success("Revisão Concluída!")
-                        st.write(resposta_ia.text)
-                        
+                    DOCUMENTO A SER REVISADO:
+                    {texto_completo}
+                    """
+                    
+                    resposta_ia = modelo.generate_content(comando_prompt)
+                    
+                    st.success("Revisão Concluída com Sucesso!")
+                    st.write(resposta_ia.text)
+                    
                 except Exception as e:
-                    st.error(f"Ocorreu um erro ao conectar com a IA. Erro técnico: {e}")
+                    st.error(f"Ocorreu um erro ao ligar à IA. Erro técnico: {e}")
 
 # ==========================================
 # ABA 3: INTEGRAÇÃO RECEITA FEDERAL
