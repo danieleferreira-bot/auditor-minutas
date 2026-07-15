@@ -14,14 +14,13 @@ def extrair_texto_docx(arquivo):
             texto.append(paragrafo.text)
     return texto
 
-# --- FUNÇÃO NOVA: LER ARQUIVOS PDF ---
+# --- FUNÇÃO: LER ARQUIVOS PDF ---
 def extrair_texto_pdf(arquivo):
     leitor_pdf = pypdf.PdfReader(arquivo)
     texto = []
     for pagina in leitor_pdf.pages:
         texto_pagina = pagina.extract_text()
         if texto_pagina:
-            # Quebra o texto do PDF em linhas para a comparação funcionar bem
             linhas = texto_pagina.split('\n')
             for linha in linhas:
                 if linha.strip():
@@ -46,17 +45,15 @@ st.write("Automatize a conferência e revisão dos seus contratos em Word ou PDF
 aba1, aba2, aba3 = st.tabs(["🔍 Comparar Minutas", "🧠 Revisor com IA", "🏢 Consultar CNPJ"])
 
 # ==========================================
-# ABA 1: COMPARADOR DE MINUTAS (Agora com PDF)
+# ABA 1: COMPARADOR DE MINUTAS
 # ==========================================
 with aba1:
     st.subheader("Comparativo de Alterações de Texto")
-    # Note que agora aceita docx E pdf
     minuta_antiga = st.file_uploader("Anexe a Minuta Antiga", type=["docx", "pdf"], key="antiga")
     minuta_nova = st.file_uploader("Anexe a Minuta Nova", type=["docx", "pdf"], key="nova")
 
     if minuta_antiga and minuta_nova:
         if st.button("Comparar Textos"):
-            # Chama a nova função inteligente
             texto_antigo = extrair_texto(minuta_antiga)
             texto_novo = extrair_texto(minuta_nova)
             diferencas = list(difflib.ndiff(texto_antigo, texto_novo))
@@ -74,15 +71,13 @@ with aba1:
                 st.info("Nenhuma diferença de texto foi encontrada!")
 
 # ==========================================
-# ABA 2: REVISOR INTELIGENTE COM GEMINI (Agora com PDF)
+# ABA 2: REVISOR INTELIGENTE COM GEMINI
 # ==========================================
 with aba2:
     st.subheader("Revisor Jurídico Avançado")
     st.write("Nossa IA fará uma varredura buscando erros de português, concordância de gênero, dados geográficos e pontuação.")
     
     chave_api = st.text_input("Cole sua Chave de API do Google Gemini:", type="password")
-    
-    # Adicionado suporte a PDF no uploader da IA também
     documento_revisao = st.file_uploader("Anexe o documento que deseja revisar", type=["docx", "pdf"], key="revisao")
     
     if st.button("Iniciar Revisão Profunda"):
@@ -94,9 +89,9 @@ with aba2:
             with st.spinner("A IA está lendo e revisando o documento. Isso pode levar alguns segundos..."):
                 try:
                     genai.configure(api_key=chave_api)
-                   modelo = genai.GenerativeModel('gemini-2.5-flash')
+                    # Modelo atualizado e perfeitamente alinhado
+                    modelo = genai.GenerativeModel('gemini-1.5-pro')
                     
-                    # Usa a função inteligente para extrair o texto
                     texto_completo = "\n".join(extrair_texto(documento_revisao))
                     
                     comando_prompt = f"""
@@ -122,7 +117,7 @@ with aba2:
                     st.write(resposta_ia.text)
                     
                 except Exception as e:
-                    st.error(f"Ocorreu um erro ao conectar com a IA. Verifique sua chave de API. Erro técnico: {e}")
+                    st.error(f"Ocorreu um erro ao conectar com a IA. Erro técnico: {e}")
 
 # ==========================================
 # ABA 3: INTEGRAÇÃO RECEITA FEDERAL
