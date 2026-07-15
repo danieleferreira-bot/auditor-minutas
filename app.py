@@ -2,74 +2,122 @@ import streamlit as st
 import requests
 import docx
 import difflib
+import google.generativeai as genai
 
-# --- FUNÇÃO NOVA: LER ARQUIVOS DO WORD ---
+# --- FUNÇÃO: LER ARQUIVOS DO WORD ---
 def extrair_texto_docx(arquivo):
     doc = docx.Document(arquivo)
     texto = []
     for paragrafo in doc.paragraphs:
-        # Pega apenas os parágrafos que têm algum texto (ignora espaços em branco)
         if paragrafo.text.strip(): 
             texto.append(paragrafo.text)
     return texto
 
-# Título da sua página
+# Configuração da Página
+st.set_page_config(page_title="Auditor de Minutas", page_icon="🕵️‍♂️", layout="wide")
 st.title("Auditor de Minutas 🕵️‍♂️")
-st.write("Faça o upload dos contratos e cruze com a Receita Federal.")
+st.write("Automatize a conferência e revisão dos seus contratos.")
 
-# Espaço para Upload dos arquivos
-minuta_antiga = st.file_uploader("Anexe a Minuta Antiga", type=["docx"])
-minuta_nova = st.file_uploader("Anexe a Minuta Nova", type=["docx"])
+# --- CRIANDO ABAS PARA ORGANIZAR O SISTEMA ---
+aba1, aba2, aba3 = st.tabs(["🔍 Comparar Minutas", "🧠 Revisor com IA", "🏢 Consultar CNPJ"])
 
-# --- NOVO BLOCO: O CÉREBRO DA COMPARAÇÃO ---
-if minuta_antiga is not None and minuta_nova is not None:
-    st.subheader("🔍 Comparativo de Alterações")
-    
-    if st.button("Comparar Minutas"):
-        # 1. Lê o texto dos dois arquivos anexados
-        texto_antigo = extrair_texto_docx(minuta_antiga)
-        texto_novo = extrair_texto_docx(minuta_nova)
-        
-        # 2. Faz a comparação linha por linha
-        diferencas = list(difflib.ndiff(texto_antigo, texto_novo))
-        
-        st.write("### Resultado da Análise:")
-        
-        mudancas_encontradas = False
-        
-        # 3. Pinta os resultados na tela
-        for linha in diferencas:
-            # Se a linha começa com '-', significa que foi APAGADA da minuta antiga
-            if linha.startswith("- "):
-                st.error(f"**Removido:** {linha[2:]}") 
-                mudancas_encontradas = True
-                
-            # Se a linha começa com '+', significa que foi ADICIONADA na minuta nova
-            elif linha.startswith("+ "):
-                st.success(f"**Adicionado/Alterado:** {linha[2:]}") 
-                mudancas_encontradas = True
-                
-        if not mudancas_encontradas:
-            st.info("Nenhuma diferença de texto foi encontrada entre as duas minutas!")
-        else:
-            st.info("💡 As partes do texto que são idênticas nos dois arquivos foram ocultadas para focar apenas nas alterações.")
+# ==========================================
+# ABA 1: COMPARADOR DE MINUTAS (O que já tínhamos)
+# ==========================================
+with aba1:
+    st.subheader("Comparativo de Alterações de Texto")
+    minuta_antiga = st.file_uploader("Anexe a Minuta Antiga", type=["docx"], key="antiga")
+    minuta_nova = st.file_uploader("Anexe a Minuta Nova", type=["docx"], key="nova")
 
-st.divider() # Uma linha para separar a tela
-
-# Testando a busca de CNPJ
-st.subheader("Teste de Integração com a Receita")
-cnpj_teste = st.text_input("Digite um CNPJ para testar (só números):")
-
-if st.button("Consultar CNPJ"):
-    if cnpj_teste:
-        url = f"https://brasilapi.com.br/api/cnpj/v1/{cnpj_teste}"
-        resposta = requests.get(url)
-        
-        if resposta.status_code == 200:
-            dados = resposta.json()
-            st.success("Dados encontrados com sucesso!")
-            st.write(f"**Razão Social:** {dados.get('razao_social')}")
-            st.write(f"**Endereço:** {dados.get('logradouro')}, {dados.get('numero')} - {dados.get('municipio')}/{dados.get('uf')}")
-        else:
-            st.error("CNPJ não encontrado ou erro na comunicação. A API pode estar instável no momento.")
+    if minuta_antiga and minuta_nova:
+        if st.button("Comparar Textos"):
+            texto_antigo = extrair_texto_docx(minuta_antiga)
+            texto_novo = extrair_texto_docx(minuta_nova)
+            diferencas = list(difflib.ndiff(texto_antigo, texto_novo))
             
+            mudancas_encontradas = False
+            for linha in diferencas:
+                if linha.startswith("- "):
+                    st.error(f"**Removido:** {linha[2:]}") 
+                    mudancas_encontradas = True
+                elif linha.startswith("+ "):
+                    st.success(f"**Adicionado/Alterado:** {linha[2:]}") 
+                    mudancas_encontradas = True
+                    
+            if not mudancas_encontradas:
+                st.info("Nenhuma diferença de texto foi encontrada!")
+
+# ==========================================
+# ABA 2: O NOVO REVISOR INTELIGENTE COM GEMINI
+# ==========================================
+with aba2:
+    st.subheader("Revisor Jurídico Avançado")
+    st.write("Nossa IA fará uma varredura buscando erros de português, concordância de gênero, dados geográficos e pontuação.")
+    
+    # Campo para colocar a chave que você pegou no Passo 1
+    chave_api = st.text_input("Cole sua Chave de API do Google Gemini (necessária para usar a IA):", type="password")
+    
+    documento_revisao = st.file_uploader("Anexe o documento que deseja revisar", type=["docx"], key="revisao")
+    
+    if st.button("Iniciar Revisão Profunda"):
+        if not chave_api:
+            st.warning("⚠️ Por favor, cole a sua Chave de API do Gemini no campo acima.")
+        elif documento_revisao is None:
+            st.warning("⚠️ Por favor, anexe um documento do Word.")
+        else:
+            with st.spinner("A IA está lendo e revisando o documento. Isso pode levar alguns segundos..."):
+                try:
+                    # Configura a IA com a sua chave
+                    genai.configure(api_key=chave_api)
+                    modelo = genai.GenerativeModel('gemini-1.5-flash')
+                    
+                    # Extrai o texto do Word
+                    texto_completo = "\n".join(extrair_texto_docx(documento_revisao))
+                    
+                    # O seu comando (Prompt) exato inserido no sistema
+                    comando_prompt = f"""
+                    Atue como um revisor de textos e documentos profissionais, jurídicos e contratuais, com foco em precisão gramatical, concordância nominal e lógica.
+
+                    TAREFA: Analise o documento enviado e identifique erros seguindo estes critérios rigorosos:
+                    1. Dados Gerais: Verifique a coerência de datas, e verifique a coerência entre os estados e municípios informados no documento.
+                    2. Erros de Digitação: Identifique palavras grafadas incorretamente ou letras trocadas.
+                    3. Identificação e Correção de Gênero: Analise o nome próprio do sujeito principal para identificar se é homem ou mulher. Identificado o gênero do nome, aponte e corrija todas as palavras no texto (pronomes, adjetivos, profissões) que estiverem no gênero oposto ou misturadas.
+                    4. Pontuação: Verifique o uso de vírgulas, pontos finais e coerência nos parágrafos.
+
+                    FORMATO FINAL:
+                    Apresente os erros encontrados em uma lista contendo: "Trecho Original" | "Sugestão de Correção". 
+                    Ao final, forneça o texto completo e revisado.
+
+                    DOCUMENTO A SER REVISADO:
+                    {texto_completo}
+                    """
+                    
+                    # Envia para o Gemini e pega a resposta
+                    resposta_ia = modelo.generate_content(comando_prompt)
+                    
+                    # Mostra a resposta na tela
+                    st.success("Revisão Concluída!")
+                    st.write(resposta_ia.text)
+                    
+                except Exception as e:
+                    st.error(f"Ocorreu um erro ao conectar com a IA. Verifique sua chave de API. Erro técnico: {e}")
+
+# ==========================================
+# ABA 3: INTEGRAÇÃO RECEITA FEDERAL
+# ==========================================
+with aba3:
+    st.subheader("Integração com a Receita Federal")
+    cnpj_teste = st.text_input("Digite um CNPJ (só números):")
+
+    if st.button("Consultar CNPJ"):
+        if cnpj_teste:
+            url = f"https://brasilapi.com.br/api/cnpj/v1/{cnpj_teste}"
+            resposta = requests.get(url)
+            
+            if resposta.status_code == 200:
+                dados = resposta.json()
+                st.success("Dados encontrados com sucesso!")
+                st.write(f"**Razão Social:** {dados.get('razao_social')}")
+                st.write(f"**Endereço:** {dados.get('logradouro')}, {dados.get('numero')} - {dados.get('municipio')}/{dados.get('uf')}")
+            else:
+                st.error("CNPJ não encontrado.")
